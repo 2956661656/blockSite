@@ -268,11 +268,18 @@ function handleBack() {
   }
 }
 
-function handleOptions() {
+// 打开设置页：优先新开标签页（行为确定），失败时回退到 openOptionsPage
+async function handleOptions() {
   try {
-    chrome.runtime.openOptionsPage();
+    await chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
   } catch (err) {
-    console.error('[站点拦截器] 打开设置页失败:', err);
+    console.warn('[站点拦截器] 新开设置页失败，尝试回退:', err);
+    try {
+      await chrome.runtime.openOptionsPage();
+    } catch (err2) {
+      console.error('[站点拦截器] 打开设置页失败:', err2);
+      showMessage('无法打开设置页，请从扩展管理页进入设置。');
+    }
   }
 }
 

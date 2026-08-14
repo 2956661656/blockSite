@@ -27,19 +27,48 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 细网格纹理：以径向遮罩向四周淡出，避免纯色页面显得死板 */
+/* 背景层：默认模式下为细网格纹理；设置背景图时切换为封面图片 */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+}
+
+/* 默认模式：细网格纹理，以径向遮罩向四周淡出，避免纯色页面显得死板 */
+body:not(.has-bg-image)::before {
   background-image:
     linear-gradient(var(--grid-line) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, black 30%, transparent 100%);
   mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, black 30%, transparent 100%);
+}
+
+/* 背景图模式：整幅封面展示，淡入出场；下方 body::after 深色遮罩保证文字可读 */
+body.has-bg-image::before {
+  background-image: var(--bp-bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  animation: bg-image-in 0.4s ease-out both;
+}
+
+/* 可读性遮罩：仅在有背景图时出现，压暗图片但不遮挡内容（main z-index: 1 在其之上） */
+body.has-bg-image::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.72);
+  animation: bg-image-in 0.4s ease-out both;
+}
+
+@keyframes bg-image-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 main {
@@ -74,6 +103,8 @@ body.ready main { animation-delay: 0s; }
 
 @media (prefers-reduced-motion: reduce) {
   main { opacity: 1; animation: none; }
+  body.has-bg-image::before,
+  body.has-bg-image::after { animation: none; }
 }
 
 /* 大尺寸 logo 徽章：主焦点，后方以主题色为底的径向光晕 */

@@ -65,6 +65,13 @@
         </div>
       </div>
 
+      <div class="field">
+        <label for="bpBgImage">背景图片</label>
+        <input id="bpBgImage" type="text" maxlength="1000000" placeholder="留空使用默认深色背景；支持 http(s)/data:/扩展资源" spellcheck="false">
+        <p class="hint">设置后拦截页会自动叠加深色遮罩，保证文字在任何图片上都可读。远程图片在每次拦截时加载。</p>
+        <p id="bpBgImageHint" class="hint bp-img-hint hidden"></p>
+      </div>
+
       <label class="check">
         <input type="checkbox" id="bpShowUrl">
         <span>显示被拦截的网址</span>

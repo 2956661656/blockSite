@@ -15,16 +15,28 @@ const ACTION_LABELS = {
 };
 const PRIMARY_ACTION = 'visitAnyway';
 const IMAGE_LOGO_PATTERN = /^(https?:|data:|chrome-extension:)/i;
+// data: 背景图长度上限（约 1MB）：超过会撑爆 chrome.storage 配额，且防抖写入会静默失败
+const MAX_DATA_IMAGE_LENGTH = 1_000_000;
 // 规则数接近上限（4900）时的提醒阈值：距离上限还有 400 条规则的空间
 const NEAR_CAP_THRESHOLD = ruleBuilder.MAX_RULES - 400;
 
-// chrome-extension: URL 仅接受本扩展自身资源（防止任意扩展资源被当作 logo）
-function isImageLogo(logo) {
-  if (!IMAGE_LOGO_PATTERN.test(logo)) return false;
-  if (/^chrome-extension:/i.test(logo)) {
-    return logo.indexOf(chrome.runtime.getURL('')) === 0;
+// 图片 URL 校验（logo 与背景图共用）：http(s)/data:/本扩展资源；
+// chrome-extension: 仅接受本扩展自身资源（防止任意扩展资源被当作 logo / 背景图）
+function isValidImageUrl(value) {
+  if (typeof value !== 'string' || !IMAGE_LOGO_PATTERN.test(value)) return false;
+  if (/^chrome-extension:/i.test(value)) {
+    return value.indexOf(chrome.runtime.getURL('')) === 0;
   }
   return true;
+}
+
+function isImageLogo(logo) {
+  return isValidImageUrl(logo);
+}
+
+// 把已验证的图片 URL 包成 CSS url() 值（转义反斜杠与双引号，避免破坏样式表）
+function cssUrlValue(url) {
+  return 'url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
 }
 
 const DEFAULT_BLOCK_PAGE = {
@@ -32,6 +44,8 @@ const DEFAULT_BLOCK_PAGE = {
   message: '此网站已被列入黑名单。为了保持专注，请离开此页面。',
   showUrl: true,
   logo: '🚫',
+  // 留空表示使用默认深色背景（不加载任何背景图片）
+  backgroundImage: '',
   theme: { bg: '#0f172a', text: '#f1f5f9', accent: '#f59e0b' },
   buttons: [
     { enabled: true, text: '返回上一页', action: 'back' },
@@ -47,6 +61,10 @@ const SECTIONS = {
 
 let bannerTimer = null;
 let blockPageSaveTimer = null;
+// 背景图预加载的递增 token：防止快速输入时旧图片的 load/error 结果覆盖新输入
+let bgPreviewToken = 0;
+// 背景图预加载的防抖定时器：输入停顿 300ms 后才发起图片请求，避免每次按键都发网络请求
+let bgPreviewTimer = null;
 
 function showBanner(msg, isError) {
   const banner = byId('banner');
@@ -199,6 +217,8 @@ function mergeBlockPage(stored) {
     // logo 允许为空字符串（用户清空后保持空，避免与保存值不一致触发回写重渲染）；
     // 缺失/非字符串时仍回退默认值。block.js 在真实拦截页对空 logo 回退为默认图标。
     logo: typeof source.logo === 'string' ? source.logo.trim() : DEFAULT_BLOCK_PAGE.logo,
+    // 背景图允许为空字符串（留空使用默认深色背景）；字符串原样保留（URL 有效性由预览与 block.js 边界校验）
+    backgroundImage: typeof source.backgroundImage === 'string' ? source.backgroundImage.trim() : '',
     theme: {
       bg: isValidColor(storedTheme.bg) ? storedTheme.bg : DEFAULT_BLOCK_PAGE.theme.bg,
       text: isValidColor(storedTheme.text) ? storedTheme.text : DEFAULT_BLOCK_PAGE.theme.text,
@@ -213,6 +233,7 @@ function renderBlockPage() {
   byId('bpTitle').value = bp.title;
   byId('bpMessage').value = bp.message;
   byId('bpLogo').value = bp.logo;
+  byId('bpBgImage').value = bp.backgroundImage;
   byId('bpShowUrl').checked = bp.showUrl;
   byId('bpBg').value = bp.theme.bg;
   byId('bpText').value = bp.theme.text;
@@ -311,9 +332,21 @@ function updateAddButtonVisibility() {
 
 // 从 DOM 收集拦截页配置 → 状态 → 保存；再刷新预览与计数
 function collectAndSave() {
+  // 超大 data: 背景图不写入状态：写入会撑爆 chrome.storage 配额导致整个 blockPage 静默丢失，
+  // 因此保留上一次有效值并提示，其余字段照常保存
+  const bgImage = byId('bpBgImage').value.trim();
+  const bgImageOversized =
+    /^data:/i.test(bgImage) && bgImage.length > MAX_DATA_IMAGE_LENGTH;
+  if (bgImageOversized) {
+    showBanner('背景图过大（data: URL 上限约 1MB），未保存', true);
+  }
+
   state.blockPage.title = byId('bpTitle').value.trim();
   state.blockPage.message = byId('bpMessage').value.trim();
   state.blockPage.logo = byId('bpLogo').value.trim();
+  if (!bgImageOversized) {
+    state.blockPage.backgroundImage = bgImage;
+  }
   state.blockPage.showUrl = byId('bpShowUrl').checked;
   state.blockPage.theme.bg = byId('bpBg').value;
   state.blockPage.theme.text = byId('bpText').value;
@@ -340,7 +373,9 @@ function collectAndSave() {
   // 防抖保存 blockPage，避免每次输入都触发存储写入与 onChanged 回环
   clearTimeout(blockPageSaveTimer);
   blockPageSaveTimer = setTimeout(() => {
-    chrome.storage.local.set({ blockPage: state.blockPage });
+    chrome.storage.local.set({ blockPage: state.blockPage }).catch(() => {
+      showBanner('保存失败：数据量超出存储上限', true);
+    });
   }, 200);
 }
 
@@ -353,6 +388,45 @@ function updateBlockPagePreview() {
   preview.style.setProperty('--bp-text', bp.theme.text);
   preview.style.setProperty('--bp-accent', bp.theme.accent);
   preview.style.setProperty('--btn-text', pickButtonTextColor(bp.theme.accent));
+
+  // 背景图：有效 URL 先预加载（成功才挂载并交给 CSS 叠加深色遮罩，失败提示回退纯色背景）；
+  // 非法/空值直接清空。递增 token 保证快速输入时旧请求的 load/error 不会覆盖新结果。
+  const bgImageHint = byId('bpBgImageHint');
+  bgPreviewToken++;
+  const clearBgImage = () => {
+    preview.style.removeProperty('--preview-bg-img');
+    preview.classList.remove('bp-preview-bg-img');
+  };
+  if (isValidImageUrl(bp.backgroundImage)) {
+    const url = bp.backgroundImage;
+    const token = bgPreviewToken;
+    // 防抖：输入停顿 300ms 后才真正发起图片请求（旧的定时器会被新输入清掉，
+    // 过期定时器即使触发也因 token 不匹配而直接返回，不产生网络请求）
+    clearTimeout(bgPreviewTimer);
+    bgPreviewTimer = setTimeout(() => {
+      if (token !== bgPreviewToken) return;
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      img.addEventListener('load', () => {
+        if (token !== bgPreviewToken) return;
+        bgImageHint.classList.add('hidden');
+        preview.style.setProperty('--preview-bg-img', cssUrlValue(url));
+        preview.classList.add('bp-preview-bg-img');
+        updateBgWarn();
+      });
+      img.addEventListener('error', () => {
+        if (token !== bgPreviewToken) return;
+        bgImageHint.textContent = '⚠ 背景图无法加载，将使用默认深色背景';
+        bgImageHint.classList.remove('hidden');
+        clearBgImage();
+        updateBgWarn();
+      });
+      img.src = url;
+    }, 300);
+  } else {
+    bgImageHint.classList.add('hidden');
+    clearBgImage();
+  }
 
   const logoEl = preview.querySelector('.bp-preview-logo');
   logoEl.replaceChildren();
@@ -381,19 +455,7 @@ function updateBlockPagePreview() {
     urlEl.classList.add('hidden');
   }
 
-  let warnEl = preview.querySelector('.bp-warn');
-  if (!warnEl) {
-    warnEl = document.createElement('div');
-    warnEl.className = 'bp-warn hidden';
-    preview.appendChild(warnEl);
-  }
-  const ratio = contrastRatio(bp.theme.bg, bp.theme.text);
-  if (ratio !== null && ratio < 3) {
-    warnEl.textContent = '⚠ 背景与文字颜色对比度不足，可能导致无法阅读';
-    warnEl.classList.remove('hidden');
-  } else {
-    warnEl.classList.add('hidden');
-  }
+  updateBgWarn();
 
   const buttonsEl = preview.querySelector('.bp-preview-buttons');
   buttonsEl.replaceChildren();
@@ -405,6 +467,31 @@ function updateBlockPagePreview() {
     el.textContent = button.text;
     buttonsEl.appendChild(el);
     rendered++;
+  }
+}
+
+// 背景图警告：图片模式下提示文字叠加深色遮罩；否则计算 bg/text 对比度。
+// 由预览渲染调用，也由图片 load/error 处理在类切换后调用，保证警告不滞后于异步加载
+function updateBgWarn() {
+  const preview = byId('bpPreview');
+  let warnEl = preview.querySelector('.bp-warn');
+  if (!warnEl) {
+    warnEl = document.createElement('div');
+    warnEl.className = 'bp-warn hidden';
+    preview.appendChild(warnEl);
+  }
+  if (preview.classList.contains('bp-preview-bg-img')) {
+    // 背景图模式下 bg/text 对比度计算无意义（图片上恒叠深色遮罩），改为静态提示
+    warnEl.textContent = '背景图模式下文字叠加深色遮罩，建议使用浅色文字';
+    warnEl.classList.remove('hidden');
+  } else {
+    const ratio = contrastRatio(state.blockPage.theme.bg, state.blockPage.theme.text);
+    if (ratio !== null && ratio < 3) {
+      warnEl.textContent = '⚠ 背景与文字颜色对比度不足，可能导致无法阅读';
+      warnEl.classList.remove('hidden');
+    } else {
+      warnEl.classList.add('hidden');
+    }
   }
 }
 
@@ -428,7 +515,7 @@ function init() {
   });
 
   // 拦截页字段：输入即收集保存并刷新预览
-  for (const id of ['bpTitle', 'bpMessage', 'bpLogo']) {
+  for (const id of ['bpTitle', 'bpMessage', 'bpLogo', 'bpBgImage']) {
     byId(id).addEventListener('input', collectAndSave);
   }
   byId('bpShowUrl').addEventListener('change', collectAndSave);

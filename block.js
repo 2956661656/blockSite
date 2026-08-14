@@ -18,6 +18,8 @@ const DEFAULT_BLOCK_PAGE = {
   message: '此网站已被列入黑名单。为了保持专注，请离开此页面。',
   showUrl: true,
   logo: '🚫',
+  // 留空表示使用默认深色背景（不加载任何背景图片）
+  backgroundImage: '',
   theme: { bg: '#0f172a', text: '#f1f5f9', accent: '#f59e0b' },
   buttons: [
     { enabled: true, text: '返回上一页', action: 'back' },
@@ -44,13 +46,18 @@ function isHttpUrl(url) {
   return typeof url === 'string' && HTTP_URL_PATTERN.test(url);
 }
 
-// chrome-extension: URL 仅接受本扩展自身资源（防止任意扩展资源被当作 logo）
-function isImageLogo(logo) {
-  if (!IMAGE_LOGO_PATTERN.test(logo)) return false;
-  if (/^chrome-extension:/i.test(logo)) {
-    return logo.indexOf(chrome.runtime.getURL('')) === 0;
+// 图片 URL 校验（logo 与背景图共用）：http(s)/data:/本扩展资源；
+// chrome-extension: 仅接受本扩展自身资源（防止任意扩展资源被当作 logo / 背景图）
+function isValidImageUrl(value) {
+  if (typeof value !== 'string' || !IMAGE_LOGO_PATTERN.test(value)) return false;
+  if (/^chrome-extension:/i.test(value)) {
+    return value.indexOf(chrome.runtime.getURL('')) === 0;
   }
   return true;
+}
+
+function isImageLogo(logo) {
+  return isValidImageUrl(logo);
 }
 
 function isValidColor(value) {
@@ -90,6 +97,14 @@ function normalizeButtons(buttons) {
   return result.length > 0 ? result : DEFAULT_BLOCK_PAGE.buttons;
 }
 
+// 背景图归一化：非字符串 → ''；空字符串保留 ''（表示使用默认深色背景）；非空无效 URL → ''
+function normalizeBackgroundImage(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return isValidImageUrl(trimmed) ? trimmed : '';
+}
+
 // 将存储值逐字段合并在默认值之上：每个字段都可能缺失或部分非法
 function mergeSettings(stored) {
   const source = stored && typeof stored === 'object' ? stored : {};
@@ -99,6 +114,7 @@ function mergeSettings(stored) {
     message: typeof source.message === 'string' && source.message.trim() ? source.message : DEFAULT_BLOCK_PAGE.message,
     showUrl: typeof source.showUrl === 'boolean' ? source.showUrl : DEFAULT_BLOCK_PAGE.showUrl,
     logo: typeof source.logo === 'string' && source.logo.trim() ? source.logo : DEFAULT_BLOCK_PAGE.logo,
+    backgroundImage: normalizeBackgroundImage(source.backgroundImage),
     theme: {
       bg: isValidColor(storedTheme.bg) ? storedTheme.bg : DEFAULT_BLOCK_PAGE.theme.bg,
       text: isValidColor(storedTheme.text) ? storedTheme.text : DEFAULT_BLOCK_PAGE.theme.text,
@@ -136,6 +152,35 @@ function applyTheme(theme) {
   root.style.setProperty('--accent', theme.accent);
   root.style.setProperty('--muted', mutedColor(theme.text));
   root.style.setProperty('--btn-text', pickButtonTextColor(theme.accent));
+}
+
+// 把已验证的图片 URL 包成 CSS url() 值（转义反斜杠与双引号，避免破坏样式表）
+function cssUrlValue(url) {
+  return 'url("' + url.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '")';
+}
+
+// 背景图先预加载，成功后再挂载（失败静默回退默认深色背景，不阻塞页面渲染）
+function applyBackgroundImage(backgroundImage) {
+  const root = document.documentElement;
+  const body = document.body;
+  const clearBackgroundImage = () => {
+    body.classList.remove('has-bg-image');
+    root.style.removeProperty('--bp-bg-image');
+  };
+
+  if (!isValidImageUrl(backgroundImage)) {
+    clearBackgroundImage();
+    return;
+  }
+
+  const img = new Image();
+  img.referrerPolicy = 'no-referrer';
+  img.addEventListener('load', () => {
+    root.style.setProperty('--bp-bg-image', cssUrlValue(backgroundImage));
+    body.classList.add('has-bg-image');
+  });
+  img.addEventListener('error', clearBackgroundImage);
+  img.src = backgroundImage;
 }
 
 function renderLogo(logo) {
@@ -179,6 +224,7 @@ function renderButtons(buttons) {
 
 function render(settings) {
   applyTheme(settings.theme);
+  applyBackgroundImage(settings.backgroundImage);
   renderLogo(settings.logo);
   byId('title').textContent = settings.title;
   byId('message').textContent = settings.message;

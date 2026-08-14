@@ -95,6 +95,9 @@ h2 { font-size: 16px; margin: 0 0 4px; }
   vertical-align: 2px;
 }
 .hint { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+.field .hint { margin: 0; }
+/* 背景图加载失败提示：红字，复用 hint 排版 */
+.field .bp-img-hint { color: var(--red); }
 .hint code, .footer em {
   background: var(--bg);
   border-radius: 5px;
@@ -352,6 +355,8 @@ h2 { font-size: 16px; margin: 0 0 4px; }
   gap: 8px;
 }
 .bp-preview {
+  position: relative;
+  z-index: 0;
   --bp-bg: #0f172a;
   --bp-text: #f1f5f9;
   --bp-accent: #f59e0b;
@@ -366,6 +371,22 @@ h2 { font-size: 16px; margin: 0 0 4px; }
   border-radius: 12px;
   background: var(--bp-bg);
   color: var(--bp-text);
+}
+
+/* 背景图模式：封面展示；遮罩压暗图片，文字仍在上层保持可读 */
+.bp-preview.bp-preview-bg-img {
+  background-image: var(--preview-bg-img, none);
+  background-size: cover;
+  background-position: center;
+}
+.bp-preview-bg-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(15, 23, 42, 0.72);
+  border-radius: inherit;
+  pointer-events: none;
 }
 .bp-preview-logo {
   display: flex;

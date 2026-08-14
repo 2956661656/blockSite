@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="title">🚫 站点拦截器</span>
+    <label class="switch" title="暂停/恢复拦截">
+      <input type="checkbox" id="enabled">
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <div id="status" class="status neutral">—</div>
+  <div id="urlBox" class="urlbox" title=""></div>
+
+  <button id="allowCurrent" class="btn primary" disabled>加入白名单：当前页面</button>
+  <button id="openOptions" class="btn ghost">编辑黑白名单…</button>
+
+  <script src="rule-builder.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

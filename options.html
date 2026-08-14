@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>站点拦截器 · 设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>🚫 站点拦截器</h1>
+    <div class="toggle-wrap">
+      <span id="toggleLabel">拦截已开启</span>
+      <label class="switch">
+        <input type="checkbox" id="enabledSwitch" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </header>
+  <p class="sub">将域名加入黑名单以阻止访问；白名单内的链接可例外放行。修改后自动保存并立即生效。</p>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <section class="card black">
+    <h2>黑名单 <span class="count" id="blackCount">0</span></h2>
+    <p class="hint">阻止整个域名（含所有子域名）。例：<code>youtube.com</code></p>
+    <form id="blackForm" class="add-row" autocomplete="off">
+      <input id="blackInput" type="text" placeholder="输入域名，如 youtube.com" spellcheck="false">
+      <button type="submit">添加</button>
+    </form>
+    <ul id="blackList" class="entries"></ul>
+  </section>
+
+  <section class="card white">
+    <h2>白名单 <span class="count" id="whiteCount">0</span></h2>
+    <p class="hint">放行具体链接（严格路径边界：仅该链接及其后续参数）。例：<code>youtube.com/watch=1234</code>
+      会放行 <code>youtube.com/watch=1234&amp;t=60</code>，但不会放行 <code>youtube.com/watch=12345</code>。</p>
+    <form id="whiteForm" class="add-row" autocomplete="off">
+      <input id="whiteInput" type="text" placeholder="输入链接，如 youtube.com/watch=1234" spellcheck="false">
+      <button type="submit">添加</button>
+    </form>
+    <ul id="whiteList" class="entries"></ul>
+  </section>
+
+  <p class="footer">黑白名单合计上限 4900 条；拦截后 Chrome 会显示 <em>ERR_BLOCKED_BY_CLIENT</em> 错误页。</p>
+</main>
+<script src="rule-builder.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

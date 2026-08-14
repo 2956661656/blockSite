@@ -1,0 +1,67 @@
+# 🚫 站点拦截器 Website Blocker
+
+Chrome 扩展（Manifest V3）：把域名加入**黑名单**阻止访问；把具体链接加入**白名单**作为例外放行。
+
+## 功能
+
+- **黑名单**：阻止整个域名及所有子域名（如 `youtube.com` 一并阻止 `www.youtube.com`、`m.youtube.com`）
+- **白名单**：放行具体链接，采用**严格·路径边界**匹配（见下表）
+- **总开关**：工具栏弹窗 / 设置页均可一键暂停或恢复拦截
+- **弹窗快捷操作**：查看当前页面是否被拦截、一键把当前页面加入白名单
+- 修改即时生效，无需刷新页面
+
+## 匹配规则示例
+
+黑名单 `youtube.com` + 白名单 `youtube.com/watch=1234` 时的行为：
+
+| 访问链接 | 结果 |
+| --- | --- |
+| `https://www.youtube.com/` | 🔴 拦截 |
+| `https://m.youtube.com/feed/subscriptions` | 🔴 拦截 |
+| `https://www.youtube.com/watch=1234` | 🟢 放行 |
+| `https://www.youtube.com/watch=1234&t=60` | 🟢 放行（允许后续参数） |
+| `https://www.youtube.com/watch=12345` | 🔴 拦截（共享前缀不放行） |
+| `https://notyoutube.com/` | ⚪ 不处理（非本域名） |
+| `https://youtube.com.evil.com/` | ⚪ 不处理（后缀域名不误伤） |
+
+原理：黑名单生成 `||域名^` 规则（`||` 域名锚点匹配子域名，`^` 边界），白名单生成 `*链接^` 规则且优先级更高——同时命中时白名单放行。
+
+## 安装
+
+1. 打开 `chrome://extensions`
+2. 右上角开启「开发者模式」
+3. 点击「加载已解压的扩展程序」，选择本项目目录
+4. 工具栏出现图标（🚫）即安装成功
+
+## 使用
+
+- 点击工具栏图标 → 弹窗：切换总开关、查看当前页状态、一键加白当前页面
+- 右键弹窗「编辑黑白名单…」或进入扩展详情 → “扩展程序选项” → 设置页管理黑白名单
+- 被拦截的页面会显示 `ERR_BLOCKED_BY_CLIENT` 错误页，属正常现象
+
+小提示：从弹窗一键加白会保留当前 URL 的全部参数；若想放行某页面而不带参数，可在设置页手动填写 `域名/路径` 前缀。
+
+## 说明
+
+- 条目自动归一化：统一小写、忽略 `http(s)://`、`www.` 前缀与结尾 `/`、忽略 `#fragment`
+- 条目不允许包含 `*` `|` `^`（urlFilter 特殊字符）
+- 黑白名单合计上限 **4900 条**（Chrome DNR 动态规则上限 5000），设置页会在接近上限时警告
+- 白名单条目若与任何黑名单网站无交集则自然不生效，属预期行为
+- 数据存于 `chrome.storage.local`
+
+## 文件结构
+
+```
+manifest.json           扩展清单（MV3）
+rule-builder.js         纯函数核心：归一化 / 构建规则 / 判定（无 chrome API，可单测）
+background.js           Service Worker：黑白名单 → DNR 动态规则同步
+options.html/js/css     设置页
+popup.html/js/css       工具栏弹窗
+icons/                  图标（scripts/make_icons.py 生成）
+test/rule-builder.test.js   node 单元测试：`node test/rule-builder.test.js`
+scripts/make_icons.py   图标生成脚本（仅标准库）
+```
+
+## 环境要求
+
+Chrome / Edge（Chromium 内核，支持 MV3 即可，建议 Chrome 88+）。

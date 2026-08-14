@@ -3,11 +3,17 @@
   "name": "站点拦截器 Website Blocker",
   "version": "1.0.0",
   "description": "黑名单阻止整个域名访问，白名单为具体链接放行例外（严格路径边界匹配）。",
-  "permissions": ["declarativeNetRequest", "storage", "tabs"],
+  "permissions": ["declarativeNetRequest", "storage", "tabs", "alarms"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["block.html"],
+      "matches": ["*://*/*"]
+    }
+  ],
   "action": {
     "default_title": "站点拦截器",
     "default_popup": "popup.html",

@@ -43,6 +43,19 @@ async function refreshStatus(state) {
   }
   const tab = await currentTab();
   const url = tab && tab.url ? tab.url : '';
+
+  // 当前标签页正是被拦截页（block.html）时，展示专属拦截状态与提示；
+  // 不展示扩展自身的 chrome-extension:// 地址
+  const blockPagePrefix = chrome.runtime.getURL('block.html');
+  if (url.indexOf(blockPagePrefix) === 0) {
+    byId('urlBox').textContent = '（被拦截页，原始地址已隐藏）';
+    byId('urlBox').title = '';
+    setStatus('blocked', '🚫 此页面已被拦截');
+    byId('allowCurrent').disabled = true;
+    byId('allowCurrent').textContent = '该网站已被加入黑名单';
+    return;
+  }
+
   byId('urlBox').textContent = url || '（无法获取当前页面地址）';
   byId('urlBox').title = url;
 
@@ -70,7 +83,14 @@ async function refreshStatus(state) {
 }
 
 async function main() {
-  const data = await chrome.storage.local.get({ blacklist: [], whitelist: [], enabled: true });
+  let data;
+  try {
+    data = await chrome.storage.local.get({ blacklist: [], whitelist: [], enabled: true });
+  } catch (err) {
+    console.error('[站点拦截器] 读取设置失败:', err);
+    setStatus('neutral', '⚠ 读取设置失败…');
+    return;
+  }
   const state = {
     blacklist: data.blacklist || [],
     whitelist: data.whitelist || [],
@@ -80,9 +100,16 @@ async function main() {
   const toggle = byId('enabled');
   toggle.checked = state.enabled;
   toggle.addEventListener('change', async () => {
-    state.enabled = toggle.checked;
-    await chrome.storage.local.set({ enabled: state.enabled });
-    refreshStatus(state);
+    const next = toggle.checked;
+    try {
+      await chrome.storage.local.set({ enabled: next });
+      state.enabled = next;
+      refreshStatus(state);
+    } catch (err) {
+      console.error('[站点拦截器] 保存设置失败:', err);
+      toggle.checked = state.enabled; // 恢复为实际生效状态
+      setStatus('neutral', '⚠ 保存设置失败');
+    }
   });
 
   byId('openOptions').addEventListener('click', openOptions);
@@ -93,6 +120,12 @@ async function main() {
     if (!rb) return;
     const entry = rb.normalizeEntry(tab.url);
     if (!entry || state.whitelist.includes(entry)) return;
+    // 与 buildRules 截断口径一致：黑名单每条 2 条规则、白名单每条 1 条规则；已达上限时拒绝写入
+    const projectedRules = state.blacklist.length * 2 + state.whitelist.length + 1;
+    if (projectedRules > rb.MAX_RULES) {
+      setStatus('neutral', '⚠ 规则已达上限（黑白名单规则合计 4900 条），无法加入白名单');
+      return;
+    }
     state.whitelist.push(entry);
     await chrome.storage.local.set({ whitelist: state.whitelist });
     byId('allowCurrent').disabled = true;

@@ -166,3 +166,264 @@ h2 { font-size: 16px; margin: 0 0 4px; }
 }
 .entries button.ghost-btn:hover { background: var(--bg); color: var(--red); }
 .entries .empty { color: var(--muted); font-family: inherit; justify-content: flex-start; }
+
+/* 拦截页设置卡片 */
+.bp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > label,
+.field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.field input[type="text"],
+.field textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.field input[type="text"]:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Logo 行：输入 + 迷你预览 */
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-row input { flex: 1; }
+.logo-preview {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 22px;
+  line-height: 1;
+  overflow: hidden;
+}
+.logo-preview-img {
+  max-width: 34px;
+  max-height: 34px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* 复选框行 */
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* 主题色选择行 */
+.theme-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.swatch {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.swatch input[type="color"] {
+  width: 34px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+}
+
+/* 按钮行 */
+.bp-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bp-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bp-btn-enable {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.bp-btn-text {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  background: #fff;
+  color: var(--text);
+}
+.bp-btn-text:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
+.bp-btn-action {
+  flex-shrink: 0;
+  padding: 8px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+}
+.bp-btn-row .ghost-btn {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.bp-btn-row .ghost-btn:hover { background: var(--bg); color: var(--red); }
+
+/* + 添加按钮 */
+.bp-add {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 8px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.bp-add:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 预览面板 */
+.bp-preview-wrap {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bp-preview {
+  --bp-bg: #0f172a;
+  --bp-text: #f1f5f9;
+  --bp-accent: #f59e0b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  min-height: 200px;
+  padding: 28px 20px;
+  border-radius: 12px;
+  background: var(--bp-bg);
+  color: var(--bp-text);
+}
+.bp-preview-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  line-height: 1;
+  min-height: 40px;
+}
+.bp-preview-logo .logo-preview-img {
+  max-width: 44px;
+  max-height: 44px;
+  object-fit: contain;
+}
+.bp-preview-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bp-preview-message {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--bp-text) 60%, transparent);
+  max-width: 320px;
+}
+.bp-preview-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--bp-text) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bp-text) 18%, transparent);
+  border-radius: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  max-width: 100%;
+  word-break: break-all;
+}
+.bp-preview-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+.bp-preview-btn {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.bp-preview-btn.primary { background: var(--bp-accent); color: var(--btn-text, var(--bp-bg)); }
+.bp-preview-btn.ghost {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--bp-text) 18%, transparent);
+  color: var(--bp-text);
+}
+
+.bp-warn {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--red);
+}

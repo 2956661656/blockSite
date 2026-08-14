@@ -42,7 +42,63 @@
     <ul id="whiteList" class="entries"></ul>
   </section>
 
-  <p class="footer">黑白名单合计上限 4900 条；拦截后 Chrome 会显示 <em>ERR_BLOCKED_BY_CLIENT</em> 错误页。</p>
+  <section class="card block-page" id="blockPageCard">
+    <h2>拦截页设置 <span class="count" id="bpCount">0</span></h2>
+    <p class="hint">被拦截时显示自定义拦截页，以下内容修改后自动保存并立即生效。</p>
+
+    <div class="bp-fields">
+      <div class="field">
+        <label for="bpTitle">页面标题</label>
+        <input id="bpTitle" type="text" maxlength="50" spellcheck="false">
+      </div>
+
+      <div class="field">
+        <label for="bpMessage">提示语</label>
+        <textarea id="bpMessage" rows="3" maxlength="200" spellcheck="false"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="bpLogo">Logo</label>
+        <div class="logo-row">
+          <input id="bpLogo" type="text" placeholder="🚫 或图片 URL（http(s)/data:/扩展资源）" spellcheck="false">
+          <span id="bpLogoPreview" class="logo-preview" aria-label="Logo 预览"></span>
+        </div>
+      </div>
+
+      <label class="check">
+        <input type="checkbox" id="bpShowUrl">
+        <span>显示被拦截的网址</span>
+      </label>
+
+      <div class="field">
+        <span class="field-label">主题色</span>
+        <div class="theme-row">
+          <label class="swatch"><input type="color" id="bpBg" value="#0f172a"><span>背景</span></label>
+          <label class="swatch"><input type="color" id="bpText" value="#f1f5f9"><span>文字</span></label>
+          <label class="swatch"><input type="color" id="bpAccent" value="#f59e0b"><span>强调</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">按钮</span>
+        <div id="bpButtons" class="bp-buttons"></div>
+        <button type="button" id="bpAddBtn" class="bp-add">+ 添加按钮</button>
+      </div>
+    </div>
+
+    <div class="bp-preview-wrap">
+      <span class="field-label">预览</span>
+      <div id="bpPreview" class="bp-preview">
+        <div class="bp-preview-logo">🚫</div>
+        <div class="bp-preview-title"></div>
+        <div class="bp-preview-message"></div>
+        <div class="bp-preview-url hidden"></div>
+        <div class="bp-preview-buttons"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer">黑名单上限 1000 条，黑白名单规则合计上限 4900 条；拦截后跳转到自定义拦截页。</p>
 </main>
 <script src="rule-builder.js"></script>
 <script src="options.js"></script>

@@ -1,0 +1,204 @@
+/* block.css —— 被拦截页面样式
+   深色「拦截」页：与扩展的浅色设置页形成反差，克制的几何质感 + 琥珀色焦点。
+   block.js 会按设置覆盖 --bg / --text / --accent / --muted，此处为默认值兜底。 */
+
+:root {
+  color-scheme: dark;
+  --bg: #0f172a;
+  --text: #f1f5f9;
+  --accent: #f59e0b;
+  --muted: rgba(241, 245, 249, 0.6);
+  --grid-line: rgba(148, 163, 184, 0.07);
+  --divider: rgba(241, 245, 249, 0.12);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.7 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 细网格纹理：以径向遮罩向四周淡出，避免纯色页面显得死板 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, black 30%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 42%, black 30%, transparent 100%);
+}
+
+main {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 24px 64px;
+  opacity: 0;
+  animation: rise-in 0.4s ease-out 1.2s both;  /* failsafe: self-recovers if JS never runs */
+}
+
+/* 唯一的进场动画：整体淡入 + 上浮，克制且聚焦；
+   主内容自带 1.2s 延迟的兜底动画——即使 block.js 从未运行（body.ready 未添加），
+   页面也会自行浮现；block.js 渲染完成后添加 body.ready 取消延迟，动画随渲染即时触发 */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+body.ready main { animation-delay: 0s; }
+
+@media (prefers-reduced-motion: reduce) {
+  main { opacity: 1; animation: none; }
+}
+
+/* 大尺寸 logo 徽章：主焦点，后方以主题色为底的径向光晕 */
+.logo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 116px;
+  height: 116px;
+  margin-bottom: 36px;
+  font-size: 62px;
+  line-height: 1;
+  user-select: none;
+}
+
+.logo::before {
+  content: "";
+  position: absolute;
+  inset: -34px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 66%);
+  filter: blur(6px);
+}
+
+.logo-img {
+  display: block;
+  max-width: 116px;
+  max-height: 96px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+h1 {
+  margin: 0 0 18px;
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+}
+
+#message {
+  margin: 0 0 28px;
+  max-width: 480px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.url-box {
+  margin: 0 0 36px;
+  max-width: min(560px, 100%);
+  padding: 10px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* 主按钮：琥珀色实底 + 深色文字，是页面唯一高对比 CTA */
+.btn {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 12px 26px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--btn-text, #0f172a);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+/* 次要按钮：描边幽灵样式，视觉上退到主按钮之后 */
+.btn-ghost {
+  background: transparent;
+  border-color: var(--divider);
+  color: var(--text);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--muted);
+  transform: translateY(-2px);
+}
+
+.btn:active { transform: translateY(0); }
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.hidden { display: none; }

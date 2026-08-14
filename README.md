@@ -1,3 +1,5 @@
+[English](README.en.md) | 中文
+
 # 🚫 站点拦截器 Website Blocker
 
 Chrome 扩展（Manifest V3）：把域名加入**黑名单**阻止访问；把具体链接加入**白名单**作为例外放行。
@@ -69,6 +71,7 @@ popup.html/js/css       工具栏弹窗
 icons/                  图标（scripts/make_icons.py 生成）
 test/rule-builder.test.js   node 单元测试：`node test/rule-builder.test.js`
 scripts/make_icons.py   图标生成脚本（仅标准库）
+README.en.md            英文版说明文档（顶部可切换回中文）
 ```
 
 ## 环境要求
